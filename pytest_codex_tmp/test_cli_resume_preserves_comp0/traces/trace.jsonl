@@ -1,5 +1,0 @@
-{"case_id": "CASE_001", "event_type": "tool_result_consumed", "evidence_refs": ["ev_saved"]}
-{"case_id": "CASE_001", "event_type": "case_finalized"}
-{"case_id": "CASE_002", "event_type": "case_received"}
-{"schema_version":"day09-trace-event-v1","event_id":"evt_8Utqe49cFGAqaL2yX9PeoYLL","case_id":"CASE_002","event_type":"case_received","occurred_at":"2026-09-25T16:00:23.921084Z","actor":"coordinator"}
-{"schema_version":"day09-trace-event-v1","event_id":"evt_PROv7AvMYhk_FpFERfJadR4O","case_id":"CASE_002","event_type":"case_finalized","occurred_at":"2026-09-25T16:00:23.922139Z","actor":"coordinator"}
