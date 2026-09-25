@@ -113,6 +113,21 @@ Quy tắc quan trọng:
 
 Tất cả MCP calls đều được audit và có thể ảnh hưởng điểm efficiency, kể cả call không được đưa vào output.
 
+### Kế hoạch tối đa 6 MCP calls cho mỗi case L3B
+
+Workflow chọn tool theo chủ đề khiếu nại. Một case có một order được resolve gọi
+`get_customer_history`, `get_order_items`, `get_payment_timeline`,
+`get_shipment_summary`, `get_policy` và thêm tối đa một tool phù hợp:
+
+- `get_product_context` cho các chủ đề không tập trung vào payment/refund;
+- `get_order_payments` cho split payment hoặc duplicate charge;
+- `get_refund_timeline` cho refund pending hoặc refund failed.
+
+`get_customer_history` cung cấp trạng thái order và mốc mua hàng; `get_order_items`
+cung cấp item, seller và product ID. Các tool bổ sung này chỉ chạy khi cần thêm
+thông tin cho kết luận. Chạy `day09 run` để tạo output/trace mới theo kế hoạch này;
+`day09 run --resume` giữ nguyên những case đã hoàn tất trước khi tối ưu.
+
 ## 5. Xây dựng multi-agent workflow
 
 Triển khai tại:
@@ -150,6 +165,10 @@ Hoàn thiện mô tả thiết kế trong `ARCHITECTURE.md`.
 day09 run
 day09 validate
 ```
+
+Nếu batch bị gián đoạn do kết nối MCP, chạy `day09 run --resume` để giữ output
+đã hoàn tất và nối tiếp timeline hiện có. Case chưa hoàn tất sẽ được chạy lại;
+các sự kiện của lần thử trước vẫn được giữ trong trace.
 
 Kết quả được tạo tại:
 

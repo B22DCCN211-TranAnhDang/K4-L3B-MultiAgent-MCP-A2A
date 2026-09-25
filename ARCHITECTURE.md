@@ -38,9 +38,9 @@ Hệ thống hoạt động theo mô hình phối hợp đa tác tử (Agent-to-
 | Actor | Input | Trách nhiệm | Tool permission | Output/handoff |
 | --- | --- | --- | --- | --- |
 | Coordinator / Router | Case JSON (`case_id`, `customer_id`, `candidates`, `claim`) | Tiếp nhận case, giải quyết entity (Entity Resolution: xếp hạng/bác bỏ order candidates), phân chia công việc cho các Specialist Agents. | `get_customer_history` | `task_assigned` & `handoff` payload chứa resolved order IDs |
-| Order/Item Agent | Handoff context từ Coordinator | Điều tra chi tiết đơn hàng, danh sách item, thông tin sản phẩm và người bán. Xác định `affected_entities` (order, item, seller). | `get_order`, `get_order_items`, `get_product_context` | Kết quả phân tích Order/Item & list evidence refs |
-| Payment Agent | Handoff context từ Coordinator | Phân tích dòng tiền, lịch sử thanh toán, hoàn tiền. Xác định `payment_analysis` (`verdict`, tổng tiền captured/refunded/refundable BRL). | `get_order_payments`, `get_payment_timeline`, `get_refund_timeline` | Kết quả phân tích Payment & list evidence refs |
-| Shipment Agent | Handoff context từ Coordinator | Phân tích hành trình vận chuyển, kiểm tra trễ hạn seller vs trễ hạn logistics. Xác định `shipment_analysis` (`verdict`, late sellers). | `get_shipment_summary`, `get_sellers` | Kết quả phân tích Shipment & list evidence refs |
+| Order/Item Agent | Handoff context từ Coordinator | Lấy item và seller ID; lấy product context cho case không tập trung vào payment/refund. | `get_order_items`, `get_product_context` (có điều kiện) | Kết quả phân tích Order/Item & list evidence refs |
+| Payment Agent | Handoff context từ Coordinator | Lấy capture theo timeline, đối chiếu payment rows cho split/duplicate, lấy refund timeline cho refund claims. | `get_payment_timeline`, `get_order_payments` (có điều kiện), `get_refund_timeline` (có điều kiện) | Kết quả phân tích Payment & list evidence refs |
+| Shipment Agent | Handoff context từ Coordinator | Phân tích hành trình vận chuyển, kiểm tra trễ hạn seller vs trễ hạn logistics. Xác định `shipment_analysis` (`verdict`, late sellers). | `get_shipment_summary` | Kết quả phân tích Shipment & list evidence refs |
 | Policy Agent | Kết quả tổng hợp từ 3 Specialist Agents | Đánh giá vi phạm chính sách sàn, xác định `primary_issue`, `secondary_issues`, `root_cause_analysis`, `financial_resolution` & `resolution_actions`. | `get_policy` | Dự thảo Case Output JSON & `policy_decided` trace |
 | Verifier Agent | Dự thảo Case Output từ Policy Agent | Kiểm tra tính tuân thủ Schema (`l3b-output-v2.schema.json`), kiểm tra tính nhất quán dữ liệu, tính toàn vẹn evidence_refs và calibration confidence. | Không (Pure Validator) | Validated Output JSON (`case_finalized`) |
 
@@ -64,7 +64,8 @@ Hệ thống hoạt động theo mô hình phối hợp đa tác tử (Agent-to-
 | Entity ambiguous / not found | 1 retry | Chuyển status `ambiguous` / `not_found` | `policy_decided` với fallback resolution |
 | Source conflict | 0 retries | Ghi nhận vào `data_conflicts` & chọn nguồn ưu tiên theo Policy | `policy_decided` |
 
-- **Caching & Efficiency**: Dữ liệu MCP thu được từ từng call được lưu cache trong bộ nhớ phạm vi của từng case để tránh gọi lặp lại cùng 1 tool với tham số giống nhau.
+- **Efficiency**: Mỗi specialist nhận context đã resolve; workflow không gọi lặp cùng một tool cho cùng order trong một case.
+- **Call plan**: Mỗi case có một resolved order dùng 5 call cố định (`get_customer_history`, `get_order_items`, `get_payment_timeline`, `get_shipment_summary`, `get_policy`) và tối đa 1 call theo chủ đề (`get_product_context`, `get_order_payments` hoặc `get_refund_timeline`).
 
 ## 6. Verification invariants
 
