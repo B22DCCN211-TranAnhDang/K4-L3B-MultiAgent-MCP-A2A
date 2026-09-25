@@ -45,3 +45,51 @@ def test_generated_manifest_matches_public_contract() -> None:
     manifest = build_manifest(case_set)
     contracts.validate_manifest(manifest)
     assert manifest["output_schema_version"] == OUTPUT_SCHEMA_VERSION
+
+
+@pytest.mark.anyio
+async def test_solve_case_multi_agent_workflow(tmp_path: Path) -> None:
+    from unittest.mock import AsyncMock
+    from student_agent.trace import TraceWriter
+    from student_agent.workflow import solve_case
+
+    root = Path(__file__).resolve().parents[1]
+    contracts = Contracts(root / "contracts" / "schemas")
+    trace_path = tmp_path / "trace.jsonl"
+    trace = TraceWriter(trace_path, contracts)
+
+    # Mock gateway responses
+    mock_gateway = AsyncMock()
+    mock_gateway.call.side_effect = lambda tool_name, case_id, **kwargs: {
+        "evidence_ref": f"ev_{tool_name}_12345678901234567890",
+        "data": {
+            "items": [{"item_id": "ITEM_1", "seller_id": "SELLER_1"}],
+            "payments": [{"payment_ref": "PAY_1", "amount_brl": 100.0}],
+            "shipment_id": "SHIP_1",
+            "status": "on_time",
+        },
+    }
+
+    case = {
+        "case_id": "L3B_CASE_001",
+        "order_id": "ORDER_100",
+        "customer_id": "CUST_555",
+        "candidates": ["ORDER_100", "ORDER_999"],
+    }
+
+    output = await solve_case(case, mock_gateway, trace)
+
+    # Validate output schema
+    contracts.validate_output(output, "workflow output")
+
+    # Verify trace events emitted
+    events = [json.loads(line) for line in trace_path.read_text(encoding="utf-8").strip().splitlines()]
+    event_types = [evt["event_type"] for evt in events]
+    assert "case_received" in event_types
+    assert "task_assigned" in event_types
+    assert "handoff" in event_types
+    assert "tool_result_consumed" in event_types
+    assert "policy_decided" in event_types
+    assert "verification_completed" in event_types
+    assert "case_finalized" in event_types
+
