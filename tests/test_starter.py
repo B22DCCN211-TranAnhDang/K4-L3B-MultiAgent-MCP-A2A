@@ -50,6 +50,7 @@ def test_generated_manifest_matches_public_contract() -> None:
 @pytest.mark.anyio
 async def test_solve_case_multi_agent_workflow(tmp_path: Path) -> None:
     from unittest.mock import AsyncMock
+
     from student_agent.trace import TraceWriter
     from student_agent.workflow import solve_case
 
@@ -83,7 +84,8 @@ async def test_solve_case_multi_agent_workflow(tmp_path: Path) -> None:
     contracts.validate_output(output, "workflow output")
 
     # Verify trace events emitted
-    events = [json.loads(line) for line in trace_path.read_text(encoding="utf-8").strip().splitlines()]
+    trace_text = trace_path.read_text(encoding="utf-8").strip()
+    events = [json.loads(line) for line in trace_text.splitlines()]
     event_types = [evt["event_type"] for evt in events]
     assert "case_received" in event_types
     assert "task_assigned" in event_types
